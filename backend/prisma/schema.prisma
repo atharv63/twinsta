@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------
+// User Model
+// -----------------------------
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  password     String
+  bio          String?
+  profilePic   String?
+  isPrivate    Boolean   @default(false)
+  posts        Post[]
+  likes        Like[]
+  sentMsgs     Message[] @relation("SentMessages")
+  receivedMsgs Message[] @relation("ReceivedMessages")
+
+  followers Follow[] @relation("FollowingRelation")
+  following Follow[] @relation("FollowerRelation")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------
+// Post Model
+// -----------------------------
+model Post {
+  id        Int      @id @default(autoincrement())
+  caption   String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
+  likes     Like[]
+}
+
+// -----------------------------
+// Like Model
+// -----------------------------
+model Like {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  post      Post     @relation(fields: [postId], references: [id])
+  postId    Int
+
+  @@unique([userId, postId])
+}
+
+// -----------------------------
+// Message Model
+// -----------------------------
+model Message {
+  id         Int      @id @default(autoincrement())
+  content    String?
+  imageUrl   String?
+  createdAt  DateTime @default(now())
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  senderId   Int
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiverId Int
+}
+
+// -----------------------------
+// Follow Model (fixed relations)
+// -----------------------------
+model Follow {
+  id          Int      @id @default(autoincrement())
+  follower    User     @relation("FollowerRelation", fields: [followerId], references: [id])
+  followerId  Int
+  following   User     @relation("FollowingRelation", fields: [followingId], references: [id])
+  followingId Int
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
