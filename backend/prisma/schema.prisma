@@ -39,22 +39,32 @@ model Post {
   updatedAt DateTime  @updatedAt
   author    User      @relation(fields: [authorId], references: [id])
   authorId  Int
-  likes     Like[]
-  comments  Comment[] // ADD THIS LINE
+  likes     Like[]    // REMOVE onDelete from here
+  comments  Comment[] // REMOVE onDelete from here
 }
 
-// -----------------------------
-// Like Model
-// -----------------------------
 model Like {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   userId    Int
-  post      Post     @relation(fields: [postId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)  // KEEP this
   postId    Int
 
   @@unique([userId, postId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)  // KEEP this
+  postId    Int
+
+  @@map("comments")
 }
 
 // -----------------------------
@@ -83,21 +93,6 @@ model Follow {
   createdAt   DateTime @default(now())
 
   @@unique([followerId, followingId])
-}
-
-model Comment {
-  id        Int      @id @default(autoincrement())
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  author   User   @relation(fields: [authorId], references: [id])
-  authorId Int
-  
-  post   Post   @relation(fields: [postId], references: [id])
-  postId Int
-
-  @@map("comments")
 }
 
 model FollowRequest {

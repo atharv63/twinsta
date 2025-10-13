@@ -43,9 +43,45 @@ export const createPost = async (req, res) => {
 export const getPosts = async (req, res) => {
   try {
     const currentUserId = req.user.id;
+    console.log("🔍 Fetching posts for user:", currentUserId);
 
-    // Get all posts with author information
+    // Get ALL posts first to see what's in the database
     const allPosts = await prisma.post.findMany({
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            isPrivate: true
+          }
+        }
+      }
+    });
+
+    console.log("📦 ALL POSTS IN DATABASE:", allPosts);
+
+    // Now get filtered posts
+    const posts = await prisma.post.findMany({
+      where: {
+        OR: [
+          { authorId: currentUserId },
+          { 
+            author: { 
+              isPrivate: false
+            } 
+          },
+          {
+            author: {
+              isPrivate: true,
+              followers: {
+                some: {
+                  followerId: currentUserId
+                }
+              }
+            }
+          }
+        ]
+      },
       orderBy: {
         createdAt: 'desc'
       },
@@ -68,40 +104,49 @@ export const getPosts = async (req, res) => {
       }
     });
 
-    // Filter posts based on privacy settings
-    const visiblePosts = await Promise.all(
-      allPosts.map(async (post) => {
-        // If post author is current user, always show
-        if (post.author.id === currentUserId) {
-          return post;
-        }
+    console.log(`📊 FILTERED POSTS: ${posts.length} posts`);
+    console.log("👥 Posts details:", posts.map(p => ({
+      id: p.id,
+      author: p.author.name,
+      isPrivate: p.author.isPrivate,
+      caption: p.caption
+    })));
 
-        // If author account is public, show post
-        if (!post.author.isPrivate) {
-          return post;
-        }
-
-        // If author account is private, check if current user is following
-        const isFollowing = await prisma.follow.findUnique({
-          where: {
-            followerId_followingId: {
-              followerId: currentUserId,
-              followingId: post.author.id
-            }
-          }
-        });
-
-        // Only show post if following the private account
-        return isFollowing ? post : null;
-      })
-    );
-
-    // Remove null values (posts from private accounts that user doesn't follow)
-    const filteredPosts = visiblePosts.filter(post => post !== null);
-
-    res.status(200).json(filteredPosts);
+    res.status(200).json(posts);
   } catch (err) {
     console.error("Get posts error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// DELETE POST
+export const deletePost = async (req, res) => {
+  const { postId } = req.params;
+  const currentUserId = req.user.id;
+
+  try {
+    // Find the post first
+    const post = await prisma.post.findUnique({
+      where: { id: parseInt(postId) }
+    });
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Check if current user is the post author
+    if (post.authorId !== currentUserId) {
+      return res.status(403).json({ message: "You can only delete your own posts" });
+    }
+
+    // Delete the post (Prisma will handle related likes/comments due to cascade)
+    await prisma.post.delete({
+      where: { id: parseInt(postId) }
+    });
+
+    res.status(200).json({ message: "Post deleted successfully" });
+  } catch (err) {
+    console.error("Delete post error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

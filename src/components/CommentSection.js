@@ -41,7 +41,11 @@ function CommentSection({ post, currentUser }) {
   };
 
   return (
-    <div style={{ marginTop: "15px" }}>
+    <div style={{ 
+      marginTop: "15px",
+      width: "100%", // Ensure it takes full width
+      boxSizing: "border-box" // Include padding in width calculation
+    }}>
       {/* Toggle Comments Button */}
       <button
         onClick={() => setShowComments(!showComments)}
@@ -51,7 +55,9 @@ function CommentSection({ post, currentUser }) {
           color: "#666",
           cursor: "pointer",
           fontSize: "14px",
-          marginBottom: "10px"
+          marginBottom: "10px",
+          width: "100%",
+          textAlign: "left"
         }}
       >
         💬 {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
@@ -59,10 +65,21 @@ function CommentSection({ post, currentUser }) {
 
       {/* Comments Section */}
       {showComments && (
-        <div>
+        <div style={{
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
           {/* Add Comment Form */}
-          <form onSubmit={handleSubmitComment} style={{ marginBottom: "15px" }}>
-            <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+          <form onSubmit={handleSubmitComment} style={{ 
+            marginBottom: "15px",
+            width: "100%"
+          }}>
+            <div style={{ 
+              display: "flex", 
+              gap: "10px", 
+              alignItems: "flex-start",
+              width: "100%"
+            }}>
               <img
                 src={currentUser.profilePic || "/default-avatar.png"}
                 alt={currentUser.name}
@@ -70,10 +87,14 @@ function CommentSection({ post, currentUser }) {
                   width: "32px",
                   height: "32px",
                   borderRadius: "50%",
-                  objectFit: "cover"
+                  objectFit: "cover",
+                  flexShrink: 0 // Prevent image from shrinking
                 }}
               />
-              <div style={{ flex: 1 }}>
+              <div style={{ 
+                flex: 1,
+                minWidth: 0 // Prevent flex item from overflowing
+              }}>
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
@@ -86,7 +107,9 @@ function CommentSection({ post, currentUser }) {
                     borderRadius: "8px",
                     fontSize: "14px",
                     resize: "vertical",
-                    fontFamily: "inherit"
+                    fontFamily: "inherit",
+                    boxSizing: "border-box", // Include padding in width
+                    maxWidth: "100%" // Prevent overflow
                   }}
                 />
                 <button
@@ -111,7 +134,11 @@ function CommentSection({ post, currentUser }) {
           </form>
 
           {/* Comments List */}
-          <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+          <div style={{ 
+            maxHeight: "200px", 
+            overflowY: "auto",
+            width: "100%"
+          }}>
             {comments.map((comment) => (
               <div
                 key={comment.id}
@@ -121,7 +148,9 @@ function CommentSection({ post, currentUser }) {
                   marginBottom: "12px",
                   padding: "8px",
                   backgroundColor: "#f8f9fa",
-                  borderRadius: "8px"
+                  borderRadius: "8px",
+                  width: "100%",
+                  boxSizing: "border-box"
                 }}
               >
                 <img
@@ -131,17 +160,32 @@ function CommentSection({ post, currentUser }) {
                     width: "28px",
                     height: "28px",
                     borderRadius: "50%",
-                    objectFit: "cover"
+                    objectFit: "cover",
+                    flexShrink: 0
                   }}
                 />
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <div style={{ 
+                  flex: 1,
+                  minWidth: 0 // Prevent text overflow
+                }}>
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "8px", 
+                    marginBottom: "4px",
+                    flexWrap: "wrap" // Allow wrapping on small screens
+                  }}>
                     <strong style={{ fontSize: "13px" }}>{comment.author.name}</strong>
                     <span style={{ fontSize: "11px", color: "#666" }}>
                       {new Date(comment.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.4" }}>
+                  <p style={{ 
+                    margin: 0, 
+                    fontSize: "14px", 
+                    lineHeight: "1.4",
+                    wordBreak: "break-word" // Break long words
+                  }}>
                     {comment.content}
                   </p>
                 </div>

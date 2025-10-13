@@ -30,7 +30,14 @@ function Navbar({ onOpenCreatePost }) {
       height: "60px"
     }}>
       {/* Logo */}
-      <h3 style={{ margin: 0, color: "#262626" }}>Twinsta</h3>
+          <h1 style={{ 
+            margin: "0 0 10px 0", 
+            fontSize: "32px", 
+            color: "#262626",
+            fontFamily: "'Brush Script MT', cursive"
+          }}>
+            Twinsta
+          </h1>
       
       {/* Navigation Links */}
       <div style={{ display: "flex", gap: "30px", alignItems: "center" }}>

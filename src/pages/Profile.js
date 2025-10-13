@@ -7,6 +7,7 @@ import {
   unfollowUser,
   checkFollowing,
   cancelFollowRequest,
+  deletePost,
 } from "../api";
 import { useParams, useLocation } from "react-router-dom";
 import EditProfileModal from "../components/EditProfileModal";
@@ -128,6 +129,30 @@ function Profile() {
       ...prevUser,
       ...updatedData,
     }));
+  };
+
+  const handleDeletePost = async (postId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this post?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deletePost(postId);
+      // Remove post from state
+      setUser((prev) => ({
+        ...prev,
+        posts: prev.posts.filter((post) => post.id !== postId),
+        _count: {
+          ...prev._count,
+          posts: prev._count.posts - 1,
+        },
+      }));
+      alert("Post deleted successfully");
+    } catch (error) {
+      console.error("Delete post error:", error);
+      alert("Failed to delete post");
+    }
   };
 
   if (loading) {
@@ -337,11 +362,37 @@ function Profile() {
                   onMouseEnter={(e) => (e.currentTarget.style.opacity = 1)}
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = 0)}
                 >
-                  <div style={{ display: "flex", gap: "20px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "20px",
+                      alignItems: "center",
+                    }}
+                  >
                     <span>❤️ {post._count?.likes || 0}</span>
                     <span>💬 {post._count?.comments || 0}</span>
+                    {isOwnProfile && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePost(post.id);
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "white",
+                          fontSize: "20px",
+                          cursor: "pointer",
+                          padding: "5px",
+                        }}
+                        title="Delete Post"
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </div>
                 </div>
+                {/* END OF HOVER OVERLAY */}
               </div>
             ))}
           </div>

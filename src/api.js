@@ -150,3 +150,11 @@ export const rejectFollowRequest = (requestId) => {
     }
   });
 };
+
+export const deletePost = (postId) => {
+  return axios.delete(`${API_URL}/posts/${postId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+};
