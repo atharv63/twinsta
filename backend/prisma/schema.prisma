@@ -16,32 +16,29 @@ model User {
   email        String    @unique
   password     String
   bio          String?
-  profilePic   String?
+  profilePic   String?   @db.Text
   isPrivate    Boolean   @default(false)
   posts        Post[]
   likes        Like[]
+  comments     Comment[] // ADD THIS LINE
   sentMsgs     Message[] @relation("SentMessages")
   receivedMsgs Message[] @relation("ReceivedMessages")
-
-  followers Follow[] @relation("FollowingRelation")
-  following Follow[] @relation("FollowerRelation")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  followers    Follow[]  @relation("FollowingRelation")
+  following    Follow[]  @relation("FollowerRelation")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
-// -----------------------------
-// Post Model
-// -----------------------------
 model Post {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   caption   String?
-  imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User     @relation(fields: [authorId], references: [id])
+  imageUrl  String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  author    User      @relation(fields: [authorId], references: [id])
   authorId  Int
   likes     Like[]
+  comments  Comment[] // ADD THIS LINE
 }
 
 // -----------------------------
@@ -85,3 +82,19 @@ model Follow {
 
   @@unique([followerId, followingId])
 }
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId Int
+  
+  post   Post   @relation(fields: [postId], references: [id])
+  postId Int
+
+  @@map("comments")
+}
+

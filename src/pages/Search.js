@@ -11,22 +11,28 @@ function Search() {
   // Search users when query changes
   useEffect(() => {
     const search = async () => {
-      if (searchQuery.trim() === "") {
-        setSearchResults([]);
-        return;
-      }
+  if (searchQuery.trim() === "") {
+    setSearchResults([]);
+    return;
+  }
 
-      setLoading(true);
-      try {
-        const response = await searchUsers(searchQuery);
-        setSearchResults(response.data);
-      } catch (error) {
-        console.error("Search failed:", error);
-        setSearchResults([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  setLoading(true);
+  try {
+    console.log("🔍 Frontend searching for:", searchQuery);
+    console.log("🔍 Token:", localStorage.getItem('token')); // Check if token exists
+    
+    const response = await searchUsers(searchQuery);
+    console.log("🔍 Backend response:", response.data);
+    
+    setSearchResults(response.data);
+  } catch (error) {
+    console.error("❌ Search failed:", error);
+    console.error("❌ Error details:", error.response?.data);
+    setSearchResults([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
     // Debounce search - wait 300ms after user stops typing
     const timeoutId = setTimeout(search, 300);
