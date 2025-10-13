@@ -27,6 +27,8 @@ model User {
   following    Follow[]  @relation("FollowerRelation")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  sentRequests     FollowRequest[] @relation("FollowerRequests")
+  receivedRequests FollowRequest[] @relation("FollowingRequests")
 }
 
 model Post {
@@ -98,3 +100,20 @@ model Comment {
   @@map("comments")
 }
 
+model FollowRequest {
+  id          Int      @id @default(autoincrement())
+  follower    User     @relation("FollowerRequests", fields: [followerId], references: [id])
+  followerId  Int
+  following   User     @relation("FollowingRequests", fields: [followingId], references: [id])
+  followingId Int
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

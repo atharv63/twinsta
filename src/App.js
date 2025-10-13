@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile"; // ADD THIS IMPORT
 import Navbar from "./components/Navbar";
 import CreatePostModal from "./components/CreatePostModal";
+import FollowRequests from "./pages/FollowRequests";
 
 function App() {
   const [showCreatePost, setShowCreatePost] = useState(false);
@@ -44,6 +45,7 @@ function WithNavbar({ showCreatePost, setShowCreatePost }) {
           {/* FIXED PROFILE ROUTES */}
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/:userId" element={<Profile />} />
+          <Route path="/follow-requests" element={<FollowRequests />} />
         </Routes>
       </div>
 

@@ -70,6 +70,19 @@ function Navbar({ onOpenCreatePost }) {
         >
           🔍 Search
         </Link>
+
+        {/* ADD FOLLOW REQUESTS LINK */}
+        <Link 
+          to="/follow-requests" 
+          style={{ 
+            textDecoration: "none", 
+            color: location.pathname === "/follow-requests" ? "#0095f6" : "#262626",
+            fontWeight: location.pathname === "/follow-requests" ? "600" : "400"
+          }}
+        >
+          📨 Requests
+        </Link>
+        
         <Link 
           to="/profile" 
           style={{ 

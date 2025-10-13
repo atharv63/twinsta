@@ -92,3 +92,61 @@ export const deleteComment = (commentId) => {
     }
   });
 };
+
+// Follow/Unfollow APIs
+// Follow/Unfollow APIs
+export const followUser = (userId) => {
+  return axios.post(`${API_URL}/users/follow/${userId}`, {}, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+};
+
+export const unfollowUser = (userId) => {
+  return axios.delete(`${API_URL}/users/unfollow/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+};
+
+export const checkFollowing = (userId) => {
+  return axios.get(`${API_URL}/users/follows/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+};
+
+export const cancelFollowRequest = (userId) => {
+  return axios.delete(`${API_URL}/users/follow-request/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+};
+
+export const getPendingFollowRequests = () => {
+  return axios.get(`${API_URL}/users/follow-requests`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+};
+
+export const approveFollowRequest = (requestId) => {
+  return axios.post(`${API_URL}/users/follow-requests/${requestId}/approve`, {}, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+};
+
+export const rejectFollowRequest = (requestId) => {
+  return axios.post(`${API_URL}/users/follow-requests/${requestId}/reject`, {}, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+};

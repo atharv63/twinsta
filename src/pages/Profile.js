@@ -1,26 +1,28 @@
 // src/pages/Profile.js
 import React, { useState, useEffect } from "react";
-import { getCurrentUser, getUserProfile } from "../api";
-import { useParams, useLocation } from "react-router-dom"; // ADD useLocation
+import {
+  getCurrentUser,
+  getUserProfile,
+  followUser,
+  unfollowUser,
+  checkFollowing,
+  cancelFollowRequest,
+} from "../api";
+import { useParams, useLocation } from "react-router-dom";
 import EditProfileModal from "../components/EditProfileModal";
 
 function Profile() {
   const { userId } = useParams();
-  const location = useLocation(); // ADD THIS
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-  // ADD THESE DEBUG LOGS
-  console.log("=== PROFILE COMPONENT ===");
-  console.log("🔴 URL userId param:", userId);
-  console.log("🔴 Current pathname:", location.pathname);
-  console.log("🔴 Full URL:", window.location.href);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [hasPendingRequest, setHasPendingRequest] = useState(false); // ADD THIS LINE
 
   useEffect(() => {
-    console.log("🟡 USEEFFECT TRIGGERED - userId:", userId);
-
     const fetchProfile = async () => {
       try {
         let userData;
@@ -29,16 +31,16 @@ function Profile() {
           console.log("🟢 FETCHING USER PROFILE FOR ID:", userId);
           userData = await getUserProfile(userId);
           setIsOwnProfile(false);
+
+          // Check if current user is following this profile
+          const followStatus = await checkFollowing(userId);
+          setIsFollowing(followStatus.data.isFollowing);
+          setHasPendingRequest(followStatus.data.hasPendingRequest); // ADD THIS LINE
         } else {
           console.log("🟢 FETCHING CURRENT USER PROFILE");
           userData = await getCurrentUser();
           setIsOwnProfile(true);
         }
-
-        console.log("✅ USER DATA RECEIVED:", userData.data);
-        console.log("📊 Posts count:", userData.data._count?.posts);
-        console.log("📦 Posts array:", userData.data.posts);
-        console.log("📦 Posts array length:", userData.data.posts?.length);
 
         setUser(userData.data);
       } catch (error) {
@@ -50,6 +52,76 @@ function Profile() {
 
     fetchProfile();
   }, [userId, location.pathname]);
+
+  const handleFollow = async () => {
+    console.log("🟢🟢🟢 HANDLE FOLLOW FUNCTION CALLED 🟢🟢🟢");
+    if (!userId) {
+      console.log("❌ No userId found");
+      return;
+    }
+
+    console.log("🟡 Button clicked - Current state:", {
+      isFollowing,
+      hasPendingRequest,
+      userId,
+    });
+    setFollowLoading(true);
+    try {
+      // If there's a pending request, cancel it
+      if (hasPendingRequest) {
+        console.log("🟡 Cancelling follow request for user:", userId);
+        await cancelFollowRequest(userId);
+        setHasPendingRequest(false);
+        console.log("✅ Follow request cancelled");
+      }
+      // If already following, unfollow
+      else if (isFollowing) {
+        console.log("🟡 Unfollowing user:", userId);
+        await unfollowUser(userId);
+        setIsFollowing(false);
+        setUser((prev) => ({
+          ...prev,
+          _count: {
+            ...prev._count,
+            followers: prev._count.followers - 1,
+          },
+        }));
+        console.log("✅ Unfollowed successfully");
+      }
+      // If not following, send follow request
+      else {
+        console.log("🟡 Sending follow request to user:", userId);
+        const response = await followUser(userId);
+        console.log("Follow response:", response);
+
+        if (response.data.requiresApproval) {
+          setHasPendingRequest(true);
+          console.log("✅ Follow request sent");
+        } else {
+          setIsFollowing(true);
+          setUser((prev) => ({
+            ...prev,
+            _count: {
+              ...prev._count,
+              followers: prev._count.followers + 1,
+            },
+          }));
+          console.log("✅ Followed directly");
+        }
+      }
+    } catch (error) {
+      console.error("❌ Follow error details:", error);
+      console.error("❌ Error response:", error.response);
+
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else {
+        alert("Failed to update follow status");
+      }
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const handleProfileUpdate = (updatedData) => {
     setUser((prevUser) => ({
@@ -108,18 +180,20 @@ function Profile() {
               display: "flex",
               alignItems: "center",
               marginBottom: "20px",
+              gap: "20px",
             }}
           >
             <h2
               style={{
-                margin: "0 30px 0 0",
+                margin: 0,
                 fontSize: "28px",
                 fontWeight: "300",
               }}
             >
               {user.name}
             </h2>
-            {isOwnProfile && (
+
+            {isOwnProfile ? (
               <button
                 onClick={() => setIsEditModalOpen(true)}
                 style={{
@@ -131,6 +205,35 @@ function Profile() {
                 }}
               >
                 Edit Profile
+              </button>
+            ) : (
+              <button
+                onClick={handleFollow}
+                disabled={followLoading} // ONLY disable when loading, not for requested state
+                style={{
+                  padding: "5px 9px",
+                  border:
+                    isFollowing || hasPendingRequest
+                      ? "1px solid #dbdbdb"
+                      : "none",
+                  borderRadius: "4px",
+                  backgroundColor:
+                    isFollowing || hasPendingRequest
+                      ? "transparent"
+                      : "#0095f6",
+                  color: isFollowing || hasPendingRequest ? "#262626" : "white",
+                  cursor: followLoading ? "default" : "pointer",
+                  fontWeight: "600",
+                  opacity: followLoading ? 0.7 : 1,
+                }}
+              >
+                {followLoading
+                  ? "..."
+                  : hasPendingRequest
+                  ? "Requested"
+                  : isFollowing
+                  ? "Following"
+                  : "Follow"}
               </button>
             )}
           </div>
@@ -158,9 +261,19 @@ function Profile() {
         </div>
       </div>
 
-      {/* Posts Grid */}
+      {/* Posts Grid - WITH PRIVATE ACCOUNT CHECK */}
       <div>
-        {user.posts && user.posts.length > 0 ? (
+        {user.canSeePosts === false && !isOwnProfile ? (
+          <div
+            style={{ textAlign: "center", padding: "60px", color: "#8e8e8e" }}
+          >
+            <div style={{ fontSize: "40px", marginBottom: "20px" }}>🔒</div>
+            <h3 style={{ margin: "0 0 10px 0" }}>This account is private</h3>
+            <p style={{ margin: 0 }}>
+              Follow this account to see their photos and videos.
+            </p>
+          </div>
+        ) : user.posts && user.posts.length > 0 ? (
           <div
             style={{
               display: "grid",
@@ -244,6 +357,7 @@ function Profile() {
           </div>
         )}
       </div>
+
       <EditProfileModal
         user={user}
         isOpen={isEditModalOpen}
