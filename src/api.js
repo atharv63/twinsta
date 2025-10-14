@@ -13,6 +13,14 @@ export const searchUsers = (query) => {
   });
 };
 
+export const searchUsersForChat = (query, currentUserId) => {
+  return axios.get(`${API_URL}/chat/search?q=${encodeURIComponent(query)}&currentUserId=${currentUserId}`);
+  // Removed headers for testing, add back if needed
+  // headers: {
+  //   Authorization: `Bearer ${localStorage.getItem('token')}`
+  // }
+}; 
+
 export const getUserProfile = (userId) => {
   return axios.get(`${API_URL}/users/profile/${userId}`, {
     headers: {
@@ -60,6 +68,8 @@ export const likePost = (postId) => {
     }
   });
 };
+
+
 
 export const getPostLikes = (postId) => {
   return axios.get(`${API_URL}/likes/post/${postId}`, {

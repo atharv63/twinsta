@@ -11,22 +11,22 @@ datasource db {
 // User Model
 // -----------------------------
 model User {
-  id           Int       @id @default(autoincrement())
-  name         String
-  email        String    @unique
-  password     String
-  bio          String?
-  profilePic   String?   @db.Text
-  isPrivate    Boolean   @default(false)
-  posts        Post[]
-  likes        Like[]
-  comments     Comment[] // ADD THIS LINE
-  sentMsgs     Message[] @relation("SentMessages")
-  receivedMsgs Message[] @relation("ReceivedMessages")
-  followers    Follow[]  @relation("FollowingRelation")
-  following    Follow[]  @relation("FollowerRelation")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id               Int             @id @default(autoincrement())
+  name             String
+  email            String          @unique
+  password         String
+  bio              String?
+  profilePic       String?         @db.Text
+  isPrivate        Boolean         @default(false)
+  posts            Post[]
+  likes            Like[]
+  comments         Comment[] // ADD THIS LINE
+  sentMsgs         Message[]       @relation("SentMessages")
+  receivedMsgs     Message[]       @relation("ReceivedMessages")
+  followers        Follow[]        @relation("FollowingRelation")
+  following        Follow[]        @relation("FollowerRelation")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   sentRequests     FollowRequest[] @relation("FollowerRequests")
   receivedRequests FollowRequest[] @relation("FollowingRequests")
 }
@@ -39,7 +39,7 @@ model Post {
   updatedAt DateTime  @updatedAt
   author    User      @relation(fields: [authorId], references: [id])
   authorId  Int
-  likes     Like[]    // REMOVE onDelete from here
+  likes     Like[] // REMOVE onDelete from here
   comments  Comment[] // REMOVE onDelete from here
 }
 
@@ -48,7 +48,7 @@ model Like {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   userId    Int
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)  // KEEP this
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade) // KEEP this
   postId    Int
 
   @@unique([userId, postId])
@@ -61,7 +61,7 @@ model Comment {
   updatedAt DateTime @updatedAt
   author    User     @relation(fields: [authorId], references: [id])
   authorId  Int
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)  // KEEP this
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade) // KEEP this
   postId    Int
 
   @@map("comments")
@@ -96,13 +96,13 @@ model Follow {
 }
 
 model FollowRequest {
-  id          Int      @id @default(autoincrement())
-  follower    User     @relation("FollowerRequests", fields: [followerId], references: [id])
+  id          Int           @id @default(autoincrement())
+  follower    User          @relation("FollowerRequests", fields: [followerId], references: [id])
   followerId  Int
-  following   User     @relation("FollowingRequests", fields: [followingId], references: [id])
+  following   User          @relation("FollowingRequests", fields: [followingId], references: [id])
   followingId Int
   status      RequestStatus @default(PENDING)
-  createdAt   DateTime @default(now())
+  createdAt   DateTime      @default(now())
 
   @@unique([followerId, followingId])
 }

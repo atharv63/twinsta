@@ -9,6 +9,7 @@ import Profile from "./pages/Profile"; // ADD THIS IMPORT
 import Navbar from "./components/Navbar";
 import CreatePostModal from "./components/CreatePostModal";
 import FollowRequests from "./pages/FollowRequests";
+import Messages from "./pages/Messages"; 
 
 function App() {
   const [showCreatePost, setShowCreatePost] = useState(false);
@@ -46,6 +47,7 @@ function WithNavbar({ showCreatePost, setShowCreatePost }) {
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/:userId" element={<Profile />} />
           <Route path="/follow-requests" element={<FollowRequests />} />
+          <Route path="/chat" element={<Messages />} />
         </Routes>
       </div>
 

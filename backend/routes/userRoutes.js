@@ -14,7 +14,7 @@ import {
   cancelFollowRequest,
   getPendingFollowRequests,
   approveFollowRequest,
-  rejectFollowRequest,
+  rejectFollowRequest
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -43,5 +43,6 @@ router.get("/follow-requests", authenticateToken, getPendingFollowRequests);
 router.post("/follow-requests/:requestId/approve", authenticateToken, approveFollowRequest);
 
 router.post("/follow-requests/:requestId/reject", authenticateToken, rejectFollowRequest);
+
 
 export default router;
