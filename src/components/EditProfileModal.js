@@ -6,8 +6,10 @@ import ImageCropper from "./ImageCropper";
 function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
     name: user.name,
-    bio: user.bio || ""
+    bio: user.bio || "",
+    isPrivate: user.isPrivate || false,
   });
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(user.profilePic || "");
   const [loading, setLoading] = useState(false);
@@ -37,16 +39,16 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       await updateUserProfile({
         ...formData,
-        profilePic: previewUrl // This is now the cropped image
+        profilePic: previewUrl, // This is now the cropped image
       });
-      
+
       onUpdate({
         ...formData,
-        profilePic: previewUrl
+        profilePic: previewUrl,
       });
       onClose();
     } catch (error) {
@@ -60,7 +62,7 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -76,28 +78,35 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
       )}
 
       {/* Edit Profile Modal */}
-      <div style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000
-      }}>
-        <div style={{
-          backgroundColor: "white",
-          padding: "30px",
-          borderRadius: "12px",
-          width: "400px",
-          maxWidth: "90vw"
-        }}>
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: "white",
+            padding: "30px",
+            borderRadius: "12px",
+            width: "400px",
+            maxWidth: "90vw",
+          }}
+        >
           <h2 style={{ margin: "0 0 20px 0" }}>Edit Profile</h2>
-          
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+
+          <form
+            onSubmit={handleSubmit}
+            style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+          >
             {/* Profile Picture Upload */}
             <div style={{ textAlign: "center" }}>
               <div style={{ marginBottom: "15px" }}>
@@ -109,20 +118,22 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
                     height: "100px",
                     borderRadius: "50%",
                     objectFit: "cover",
-                    border: "2px solid #dbdbdb"
+                    border: "2px solid #dbdbdb",
                   }}
                 />
               </div>
-              
-              <label style={{
-                display: "inline-block",
-                padding: "8px 16px",
-                backgroundColor: "#0095f6",
-                color: "white",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}>
+
+              <label
+                style={{
+                  display: "inline-block",
+                  padding: "8px 16px",
+                  backgroundColor: "#0095f6",
+                  color: "white",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+              >
                 Choose Photo
                 <input
                   type="file"
@@ -131,16 +142,28 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
                   style={{ display: "none" }}
                 />
               </label>
-              
+
               {previewUrl && previewUrl !== user.profilePic && (
-                <p style={{ margin: "10px 0 0 0", fontSize: "12px", color: "#666" }}>
+                <p
+                  style={{
+                    margin: "10px 0 0 0",
+                    fontSize: "12px",
+                    color: "#666",
+                  }}
+                >
                   New photo selected
                 </p>
               )}
             </div>
 
             <div>
-              <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "5px",
+                  fontWeight: "500",
+                }}
+              >
                 Name
               </label>
               <input
@@ -153,14 +176,20 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
                   padding: "8px 12px",
                   border: "1px solid #dbdbdb",
                   borderRadius: "4px",
-                  fontSize: "14px"
+                  fontSize: "14px",
                 }}
                 required
               />
             </div>
 
             <div>
-              <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "5px",
+                  fontWeight: "500",
+                }}
+              >
                 Bio
               </label>
               <textarea
@@ -176,12 +205,43 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
                   borderRadius: "4px",
                   fontSize: "14px",
                   resize: "vertical",
-                  fontFamily: "inherit"
+                  fontFamily: "inherit",
                 }}
               />
             </div>
 
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <label style={{ fontWeight: "500" }}>Private Account</label>
+              <input
+                type="checkbox"
+                name="isPrivate"
+                checked={formData.isPrivate}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    isPrivate: e.target.checked,
+                  })
+                }
+                style={{
+                  width: "16px",
+                  height: "16px",
+                }}
+              />
+              <span style={{ fontSize: "12px", color: "#666" }}>
+                {formData.isPrivate
+                  ? "Users must request to follow you"
+                  : "Anyone can follow you"}
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                justifyContent: "flex-end",
+                marginTop: "10px",
+              }}
+            >
               <button
                 type="button"
                 onClick={onClose}
@@ -190,7 +250,7 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
                   border: "1px solid #dbdbdb",
                   borderRadius: "4px",
                   backgroundColor: "transparent",
-                  cursor: "pointer"
+                  cursor: "pointer",
                 }}
               >
                 Cancel
@@ -205,7 +265,7 @@ function EditProfileModal({ user, isOpen, onClose, onUpdate }) {
                   backgroundColor: "#0095f6",
                   color: "white",
                   cursor: "pointer",
-                  opacity: loading ? 0.7 : 1
+                  opacity: loading ? 0.7 : 1,
                 }}
               >
                 {loading ? "Saving..." : "Save"}

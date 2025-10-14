@@ -4,8 +4,9 @@ import prisma from "../config/db.js";
 // SEARCH USERS
 export const searchUsers = async (req, res) => {
   const { q } = req.query;
+  const currentUserId = req.user.id;
 
-  console.log("🔍 SEARCH REQUEST RECEIVED - Query:", q);
+  console.log("🔍 SEARCH REQUEST RECEIVED - Query:", q, "by user:", currentUserId);
 
   try {
     if (!q || q.trim() === "") {
@@ -13,20 +14,17 @@ export const searchUsers = async (req, res) => {
       return res.status(200).json([]);
     }
 
-    // For MySQL, we need to handle case-insensitive search differently
     const users = await prisma.user.findMany({
       where: {
         OR: [
           { 
             name: { 
               contains: q
-              // Remove mode: 'insensitive' for MySQL
             } 
           },
           { 
             email: { 
               contains: q
-              // Remove mode: 'insensitive' for MySQL
             } 
           }
         ]
@@ -49,21 +47,62 @@ export const searchUsers = async (req, res) => {
       take: 20
     });
 
-    console.log("📊 USERS FOUND:", users.length);
-    console.log("👥 USERS:", users.map(u => ({ name: u.name, email: u.email })));
+    // Add follow status for each user in search results
+    const usersWithStatus = await Promise.all(
+      users.map(async (user) => {
+        let isFollowing = false;
+        let hasPendingRequest = false;
+        
+        if (user.id !== currentUserId) {
+          // Check if following
+          const follow = await prisma.follow.findUnique({
+            where: {
+              followerId_followingId: {
+                followerId: currentUserId,
+                followingId: user.id
+              }
+            }
+          });
+          isFollowing = !!follow;
+
+          // Check if pending follow request (for private accounts)
+          if (user.isPrivate && !isFollowing) {
+            const request = await prisma.followRequest.findUnique({
+              where: {
+                followerId_followingId: {
+                  followerId: currentUserId,
+                  followingId: user.id
+                }
+              }
+            });
+            hasPendingRequest = !!request && request.status === 'PENDING';
+          }
+        }
+
+        return {
+          ...user,
+          isFollowing,
+          hasPendingRequest,
+          isCurrentUser: user.id === currentUserId
+        };
+      })
+    );
+
+    console.log("📊 USERS FOUND:", usersWithStatus.length);
     
-    res.status(200).json(users);
+    res.status(200).json(usersWithStatus);
   } catch (err) {
     console.error("❌ Search error:", err);
     res.status(500).json({ message: "Server error during search" });
   }
 };
 
-// GET USER PROFILE BY ID
+// GET USER PROFILE BY ID (with private account logic)
 export const getUserProfile = async (req, res) => {
   const { userId } = req.params;
+  const currentUserId = req.user.id;
 
-  console.log("🔍 Fetching profile for user ID:", userId);
+  console.log("🔍 Fetching profile for user ID:", userId, "by user:", currentUserId);
 
   try {
     const user = await prisma.user.findUnique({
@@ -75,20 +114,6 @@ export const getUserProfile = async (req, res) => {
         profilePic: true,
         bio: true,
         isPrivate: true,
-        posts: {
-          orderBy: {
-            createdAt: 'desc'
-          },
-          include: {
-            likes: true,
-            _count: {
-              select: {
-                likes: true,
-                comments: true
-              }
-            }
-          }
-        },
         _count: {
           select: {
             followers: true,
@@ -100,14 +125,60 @@ export const getUserProfile = async (req, res) => {
     });
 
     console.log("📊 User found:", user ? `Yes (${user.name})` : "No");
-    console.log("📦 User posts:", user?.posts);
-    console.log("📦 User posts length:", user?.posts?.length);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user);
+    // Check if current user can see posts
+    let canSeePosts = false;
+    
+    if (parseInt(userId) === currentUserId) {
+      // Own profile - can see all posts
+      canSeePosts = true;
+    } else if (!user.isPrivate) {
+      // Public account - anyone can see posts
+      canSeePosts = true;
+    } else {
+      // Private account - check if following
+      const isFollowing = await prisma.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: currentUserId,
+            followingId: parseInt(userId)
+          }
+        }
+      });
+      canSeePosts = !!isFollowing;
+    }
+
+    console.log("👀 Can see posts:", canSeePosts);
+
+    // Get posts only if user can see them
+    let posts = [];
+    if (canSeePosts) {
+      posts = await prisma.post.findMany({
+        where: { authorId: parseInt(userId) },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          likes: true,
+          _count: {
+            select: {
+              likes: true,
+              comments: true
+            }
+          }
+        }
+      });
+    }
+
+    console.log("📦 Posts to show:", posts.length);
+
+    res.status(200).json({
+      ...user,
+      posts,
+      canSeePosts // Send this to frontend
+    });
   } catch (err) {
     console.error("❌ Profile error:", err);
     res.status(500).json({ message: "Server error" });
@@ -159,18 +230,19 @@ export const getCurrentUser = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   const userId = req.user.id;
-  const { name, bio, profilePic } = req.body;
+  const { name, bio, profilePic, isPrivate } = req.body; // ADD isPrivate
 
   try {
     console.log("🔄 Updating profile for user:", userId);
-    console.log("📝 Update data:", { name, bio, profilePic: profilePic ? "has image" : "no image" });
+    console.log("📝 Update data:", { name, bio, profilePic: profilePic ? "has image" : "no image", isPrivate });
 
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(userId) },
       data: {
         name,
         bio,
-        profilePic
+        profilePic,
+        isPrivate: isPrivate || false // ADD this line
       },
       select: {
         id: true,
@@ -178,7 +250,7 @@ export const updateProfile = async (req, res) => {
         email: true,
         profilePic: true,
         bio: true,
-        isPrivate: true,
+        isPrivate: true, // ADD this
         _count: {
           select: {
             followers: true,
@@ -194,5 +266,262 @@ export const updateProfile = async (req, res) => {
   } catch (err) {
     console.error("❌ Update profile error:", err);
     res.status(500).json({ message: "Error updating profile" });
+  }
+};
+
+export const followUser = async (req, res) => {
+  const { userId } = req.params;
+  const followerId = req.user.id;
+
+  try {
+    // Can't follow yourself
+    if (parseInt(userId) === followerId) {
+      return res.status(400).json({ message: "You cannot follow yourself" });
+    }
+
+    // Check if user exists
+    const userToFollow = await prisma.user.findUnique({
+      where: { id: parseInt(userId) }
+    });
+
+    if (!userToFollow) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if already following
+    const existingFollow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: followerId,
+          followingId: parseInt(userId)
+        }
+      }
+    });
+
+    if (existingFollow) {
+      return res.status(400).json({ message: "Already following this user" });
+    }
+
+    // Check if there's already a pending follow request
+    const existingRequest = await prisma.followRequest.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: followerId,
+          followingId: parseInt(userId)
+        }
+      }
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ message: "Follow request already sent" });
+    }
+
+    // PUBLIC/PRIVATE LOGIC
+    if (userToFollow.isPrivate) {
+      // For private accounts - create follow request
+      const followRequest = await prisma.followRequest.create({
+        data: {
+          followerId: followerId,
+          followingId: parseInt(userId),
+          status: 'PENDING'
+        }
+      });
+
+      return res.status(200).json({ 
+        message: "Follow request sent", 
+        isPrivate: true,
+        requiresApproval: true,
+        requestId: followRequest.id
+      });
+    } else {
+      // For public accounts - follow directly
+      const follow = await prisma.follow.create({
+        data: {
+          followerId: followerId,
+          followingId: parseInt(userId)
+        }
+      });
+
+      return res.status(200).json({ 
+        message: "Followed successfully", 
+        follow,
+        isPrivate: false 
+      });
+    }
+  } catch (err) {
+    console.error("Follow error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// UNFOLLOW USER
+export const unfollowUser = async (req, res) => {
+  const { userId } = req.params;
+  const followerId = req.user.id;
+
+  try {
+    const follow = await prisma.follow.delete({
+      where: {
+        followerId_followingId: {
+          followerId: followerId,
+          followingId: parseInt(userId)
+        }
+      }
+    });
+
+    res.status(200).json({ message: "Unfollowed successfully" });
+  } catch (err) {
+    console.error("Unfollow error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const checkFollowing = async (req, res) => {
+  const { userId } = req.params;
+  const currentUserId = req.user.id;
+
+  try {
+    // Check if already following
+    const existingFollow = await prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUserId,
+          followingId: parseInt(userId)
+        }
+      }
+    });
+
+    // Check if there's a pending follow request
+    const pendingRequest = await prisma.followRequest.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: currentUserId,
+          followingId: parseInt(userId)
+        }
+      }
+    });
+
+    res.status(200).json({ 
+      isFollowing: !!existingFollow,
+      hasPendingRequest: !!pendingRequest && pendingRequest.status === 'PENDING'
+    });
+  } catch (err) {
+    console.error("Check following error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// CANCEL FOLLOW REQUEST
+export const cancelFollowRequest = async (req, res) => {
+  const { userId } = req.params;
+  const followerId = req.user.id;
+
+  try {
+    const followRequest = await prisma.followRequest.delete({
+      where: {
+        followerId_followingId: {
+          followerId: followerId,
+          followingId: parseInt(userId)
+        }
+      }
+    });
+
+    res.status(200).json({ message: "Follow request cancelled" });
+  } catch (err) {
+    console.error("Cancel follow request error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// GET PENDING FOLLOW REQUESTS
+export const getPendingFollowRequests = async (req, res) => {
+  const currentUserId = req.user.id;
+
+  try {
+    const pendingRequests = await prisma.followRequest.findMany({
+      where: {
+        followingId: currentUserId,
+        status: 'PENDING'
+      },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePic: true,
+            bio: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.status(200).json(pendingRequests);
+  } catch (err) {
+    console.error("Get pending requests error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// APPROVE FOLLOW REQUEST
+export const approveFollowRequest = async (req, res) => {
+  const { requestId } = req.params;
+  const currentUserId = req.user.id;
+
+  try {
+    // Find the request
+    const followRequest = await prisma.followRequest.findUnique({
+      where: { id: parseInt(requestId) }
+    });
+
+    if (!followRequest || followRequest.followingId !== currentUserId) {
+      return res.status(404).json({ message: "Follow request not found" });
+    }
+
+    // Create the follow relationship
+    const follow = await prisma.follow.create({
+      data: {
+        followerId: followRequest.followerId,
+        followingId: followRequest.followingId
+      }
+    });
+
+    // Delete the request
+    await prisma.followRequest.delete({
+      where: { id: parseInt(requestId) }
+    });
+
+    res.status(200).json({ message: "Follow request approved", follow });
+  } catch (err) {
+    console.error("Approve request error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// REJECT FOLLOW REQUEST
+export const rejectFollowRequest = async (req, res) => {
+  const { requestId } = req.params;
+  const currentUserId = req.user.id;
+
+  try {
+    const followRequest = await prisma.followRequest.findUnique({
+      where: { id: parseInt(requestId) }
+    });
+
+    if (!followRequest || followRequest.followingId !== currentUserId) {
+      return res.status(404).json({ message: "Follow request not found" });
+    }
+
+    await prisma.followRequest.delete({
+      where: { id: parseInt(requestId) }
+    });
+
+    res.status(200).json({ message: "Follow request rejected" });
+  } catch (err) {
+    console.error("Reject request error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
