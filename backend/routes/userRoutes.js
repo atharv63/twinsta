@@ -5,6 +5,8 @@ import {
   getUserProfile,
   getCurrentUser,
   updateProfile,
+  getFollowers,
+  getFollowing
 } from "../controllers/userController.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import {
@@ -44,5 +46,8 @@ router.post("/follow-requests/:requestId/approve", authenticateToken, approveFol
 
 router.post("/follow-requests/:requestId/reject", authenticateToken, rejectFollowRequest);
 
+router.get("/followers/:userId", authenticateToken, getFollowers);
+
+router.get("/following/:userId", authenticateToken, getFollowing);
 
 export default router;

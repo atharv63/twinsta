@@ -19,7 +19,7 @@ export const searchUsersForChat = (query, currentUserId) => {
   // headers: {
   //   Authorization: `Bearer ${localStorage.getItem('token')}`
   // }
-}; 
+};
 
 export const getUserProfile = (userId) => {
   return axios.get(`${API_URL}/users/profile/${userId}`, {
@@ -166,5 +166,21 @@ export const deletePost = (postId) => {
     headers: {
       Authorization: `Bearer ${localStorage.getItem('token')}`
     }
+  });
+};
+
+export const getFollowers = (userId) => {
+  return axios.get(`${API_URL}/users/followers/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+};
+
+export const getFollowing = (userId) => {
+  return axios.get(`${API_URL}/users/following/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
   });
 };

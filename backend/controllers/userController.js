@@ -569,3 +569,59 @@ export const searchChatUsers = async (req, res) => {
     res.status(500).json({ message: "Server error during chat search" });
   }
 };
+
+export const getFollowers = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const followers = await prisma.follow.findMany({
+      where: { followingId: parseInt(userId) },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePic: true,
+            bio: true
+          }
+        }
+      }
+    });
+
+    const followerUsers = followers.map(follow => follow.follower);
+    res.status(200).json(followerUsers);
+  } catch (err) {
+    console.error("Get followers error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// GET FOLLOWING
+export const getFollowing = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    console.log(userId);
+    const following = await prisma.follow.findMany({
+      where: { followerId: parseInt(userId) },
+      include: {
+        following: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePic: true,
+            bio: true
+          }
+        }
+      }
+    });
+
+    const followingUsers = following.map(follow => follow.following);
+    res.status(200).json(followingUsers);
+  } catch (err) {
+    console.error("Get following error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

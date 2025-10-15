@@ -11,6 +11,7 @@ import {
 } from "../api";
 import { useParams, useLocation } from "react-router-dom";
 import EditProfileModal from "../components/EditProfileModal";
+import FollowersModal from "../components/FollowersModal";
 
 function Profile() {
   const { userId } = useParams();
@@ -22,6 +23,9 @@ function Profile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [hasPendingRequest, setHasPendingRequest] = useState(false); // ADD THIS LINE
+  const [modalType, setModalType] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -255,10 +259,10 @@ function Profile() {
                 {followLoading
                   ? "..."
                   : hasPendingRequest
-                  ? "Requested"
-                  : isFollowing
-                  ? "Following"
-                  : "Follow"}
+                    ? "Requested"
+                    : isFollowing
+                      ? "Following"
+                      : "Follow"}
               </button>
             )}
           </div>
@@ -268,10 +272,22 @@ function Profile() {
             <span>
               <strong>{user._count.posts}</strong> posts
             </span>
-            <span>
+            <span
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                setModalType('followers');
+                setIsModalOpen(true);
+              }}
+            >
               <strong>{user._count.followers}</strong> followers
             </span>
-            <span>
+            <span
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                setModalType('following');
+                setIsModalOpen(true);
+              }}
+            >
               <strong>{user._count.following}</strong> following
             </span>
           </div>
@@ -414,6 +430,12 @@ function Profile() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onUpdate={handleProfileUpdate}
+      />
+      <FollowersModal
+        type={modalType}
+        userId={user.id}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
       />
     </div>
   );
