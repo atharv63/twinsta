@@ -13,9 +13,9 @@ console.log('Chat model available:', !!prisma?.chat);
 export const getChatsForUser = async (req, res) => {
   try {
     console.log('getChatsForUser - Prisma status:', !!prisma);
-    
+
     const userId = parseInt(req.params.userId, 10);
-    
+
     if (isNaN(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
     }
@@ -77,7 +77,7 @@ export const createOrGetChat = async (req, res) => {
 
     // Convert all to numbers
     const ids = userIds.map((id) => parseInt(id, 10));
-    
+
     // Validate user IDs
     if (ids.some(isNaN)) {
       return res.status(400).json({ message: "Invalid user IDs" });
@@ -88,7 +88,7 @@ export const createOrGetChat = async (req, res) => {
     // For 1:1 chats, check if a chat already exists with exactly these 2 users
     if (ids.length === 2) {
       console.log('Checking for existing 1:1 chat...');
-      
+
       const existingChat = await prisma.chat.findFirst({
         where: {
           AND: [
@@ -102,15 +102,15 @@ export const createOrGetChat = async (req, res) => {
           ]
         },
         include: {
-          users: { 
-            include: { 
-              user: { select: { id: true, name: true, profilePic: true } } 
-            } 
+          users: {
+            include: {
+              user: { select: { id: true, name: true, profilePic: true } }
+            }
           },
-          messages: { 
-            orderBy: { createdAt: "desc" }, 
-            take: 1, 
-            include: { sender: true } 
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            include: { sender: true }
           }
         }
       });
@@ -124,6 +124,17 @@ export const createOrGetChat = async (req, res) => {
     }
 
     console.log('Creating new chat...');
+    // Verify all users exist
+    console.log("Requested IDs:", ids);
+
+    const existingUsers = await prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true }
+    });
+
+    console.log("Existing users in DB:", existingUsers.map(u => u.id));
+
+
 
     // Create new chat
     const chat = await prisma.chat.create({
@@ -134,10 +145,10 @@ export const createOrGetChat = async (req, res) => {
         }
       },
       include: {
-        users: { 
-          include: { 
-            user: { select: { id: true, name: true, profilePic: true } } 
-          } 
+        users: {
+          include: {
+            user: { select: { id: true, name: true, profilePic: true } }
+          }
         },
         messages: {
           orderBy: { createdAt: "desc" },

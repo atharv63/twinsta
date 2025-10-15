@@ -2,8 +2,9 @@ import React, { useEffect, useState, useRef } from "react";
 import socket from "../utils/socket";
 import "../styles/message.css";
 import { searchUsers } from "../api";
+import { jwtDecode } from "jwt-decode"; // named import
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API_BASE = "http://localhost:5000/api";
 
 // helper to get logged-in user id
 function getCurrentUserId() {
@@ -105,7 +106,7 @@ export default function Messages() {
 
     try {
       console.log("🔍 Searching users:", searchTerm);
-      
+
       const results = await searchUsers(searchTerm);
       console.log("🔍 Search results:", results.data);
 
@@ -116,15 +117,15 @@ export default function Messages() {
       }
 
       const availableUsers = results.data || [];
-      
+
       setSearchResults(availableUsers);
-      
+
       if (availableUsers.length === 0) {
         setError("No users found");
       } else {
         setError("");
       }
-      
+
     } catch (err) {
       console.error("Search error:", err);
       console.error("Error details:", err.response?.data || err.message);
@@ -134,6 +135,17 @@ export default function Messages() {
 
   // start chat with searched user
   const startChatWithUser = async (otherUserId) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("User not logged in");
+      return;
+    }
+
+    // Decode token to get logged-in user ID
+    const decoded = jwtDecode(token);
+    const loggedInUserId = decoded.id; // or whatever field you stored in token
+
     const user = searchResults.find((u) => u.id === otherUserId);
     if (!user) {
       setError("Cannot start chat with this user.");
@@ -141,18 +153,21 @@ export default function Messages() {
     }
 
     try {
-      console.log("Starting chat with user:", user.id, user.name);
-      
-      const body = { userIds: [Number(userId), Number(otherUserId)] };
-      const res = await fetch(`${API_BASE}/chats`, {
+      console.log("Starting chat with user:", user.id, user.name, "from userId:", loggedInUserId);
+
+      const body = {
+        userIds: [Number(loggedInUserId), Number(otherUserId)],
+        name: user.name
+      };
+
+      const res = await fetch(`${API_BASE}/chats/createorget`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` // optional if backend uses auth middleware
         },
         body: JSON.stringify(body),
       });
-
-      console.log("Create chat response status:", res.status);
 
       if (!res.ok) {
         const errData = await res.json();
@@ -163,23 +178,23 @@ export default function Messages() {
 
       const chat = await res.json();
       console.log("Chat created:", chat);
-      
+
       // Refresh chats list
-      const refreshRes = await fetch(`${API_BASE}/chats/${userId}`);
+      const refreshRes = await fetch(`${API_BASE}/chats/${loggedInUserId}`);
       const updatedChats = await refreshRes.json();
       setChats(Array.isArray(updatedChats) ? updatedChats : []);
-      
-      // Open the new chat
+
       openChat(chat);
       setSearchTerm("");
       setSearchResults([]);
       setError("");
-      
+
     } catch (err) {
       console.error("Start chat error:", err);
       setError("Unable to start chat. Try again.");
     }
   };
+
 
   return (
     <div className="chat-page" style={{ display: "flex", height: "85vh" }}>
