@@ -1,7 +1,10 @@
 // backend/controllers/chatController.js
-import { PrismaClient } from '@prisma/client'
+import prisma from '../config/db.js';
 
-const prisma = new PrismaClient()
+
+// Debug: Check if prisma is working
+console.log('Prisma client in chatController:', !!prisma);
+console.log('Chat model available:', !!prisma?.chat);
 
 /**
  * Get all chats for a user.
@@ -9,6 +12,8 @@ const prisma = new PrismaClient()
  */
 export const getChatsForUser = async (req, res) => {
   try {
+    console.log('getChatsForUser - Prisma status:', !!prisma);
+    
     const userId = parseInt(req.params.userId, 10);
     
     if (isNaN(userId)) {
@@ -61,6 +66,9 @@ export const getChatsForUser = async (req, res) => {
  */
 export const createOrGetChat = async (req, res) => {
   try {
+    console.log('createOrGetChat - Prisma status:', !!prisma);
+    console.log('Request body:', req.body);
+
     const { userIds, name } = req.body;
 
     if (!Array.isArray(userIds) || userIds.length === 0) {
@@ -75,8 +83,12 @@ export const createOrGetChat = async (req, res) => {
       return res.status(400).json({ message: "Invalid user IDs" });
     }
 
+    console.log('Processing chat for users:', ids);
+
     // For 1:1 chats, check if a chat already exists with exactly these 2 users
     if (ids.length === 2) {
+      console.log('Checking for existing 1:1 chat...');
+      
       const existingChat = await prisma.chat.findFirst({
         where: {
           AND: [
@@ -103,10 +115,15 @@ export const createOrGetChat = async (req, res) => {
         }
       });
 
+      console.log('Existing chat found:', !!existingChat);
+
       if (existingChat && existingChat.users.length === 2) {
+        console.log('Returning existing chat:', existingChat.id);
         return res.json(existingChat);
       }
     }
+
+    console.log('Creating new chat...');
 
     // Create new chat
     const chat = await prisma.chat.create({
@@ -130,9 +147,11 @@ export const createOrGetChat = async (req, res) => {
       }
     });
 
+    console.log('New chat created:', chat.id);
     res.status(201).json(chat);
   } catch (err) {
     console.error("createOrGetChat error:", err);
+    console.error("Error details:", err);
     res.status(500).json({ message: err.message });
   }
 };

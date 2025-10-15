@@ -10,6 +10,8 @@ import likeRoutes from "./routes/likeRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import chatSearchRoutes from "./routes/chatSearchRoutes.js";
+import prisma from './config/db.js';
+console.log('Global Prisma test:', !!prisma.chat); // Make sure this is imported
 
 dotenv.config();
 const app = express();
@@ -24,7 +26,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/likes", likeRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/chats", chatRoutes);
-app.use("/api/chat", chatSearchRoutes);
+app.use("/api/chat", chatSearchRoutes); // Make sure this line exists
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
