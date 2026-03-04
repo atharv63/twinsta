@@ -1,5 +1,6 @@
 // backend/controllers/userController.js
 import prisma from "../config/db.js";
+// import prisma from "../models/prismaClient.js";
 
 // SEARCH USERS
 export const searchUsers = async (req, res) => {
@@ -522,6 +523,105 @@ export const rejectFollowRequest = async (req, res) => {
     res.status(200).json({ message: "Follow request rejected" });
   } catch (err) {
     console.error("Reject request error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// SEARCH USERS TO CHAT (only show users the current user follows)
+export const searchChatUsers = async (req, res) => {
+  const { q } = req.query;
+  const currentUserId = req.user.id;
+
+  try {
+    if (!q || q.trim() === "") {
+      return res.status(200).json([]);
+    }
+
+    // Get all users current user follows
+    const following = await prisma.follow.findMany({
+      where: { followerId: currentUserId },
+      select: { followingId: true },
+    });
+    const followingIds = following.map(f => f.followingId);
+
+    // Search only among followed users
+    const users = await prisma.user.findMany({
+      where: {
+        id: { in: followingIds },
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        profilePic: true,
+        bio: true,
+      },
+      take: 20
+    });
+
+    res.status(200).json(users);
+  } catch (err) {
+    console.error("❌ searchChatUsers error:", err);
+    res.status(500).json({ message: "Server error during chat search" });
+  }
+};
+
+export const getFollowers = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const followers = await prisma.follow.findMany({
+      where: { followingId: parseInt(userId) },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePic: true,
+            bio: true
+          }
+        }
+      }
+    });
+
+    const followerUsers = followers.map(follow => follow.follower);
+    res.status(200).json(followerUsers);
+  } catch (err) {
+    console.error("Get followers error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// GET FOLLOWING
+export const getFollowing = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    console.log(userId);
+    const following = await prisma.follow.findMany({
+      where: { followerId: parseInt(userId) },
+      include: {
+        following: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePic: true,
+            bio: true
+          }
+        }
+      }
+    });
+
+    const followingUsers = following.map(follow => follow.following);
+    res.status(200).json(followingUsers);
+  } catch (err) {
+    console.error("Get following error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

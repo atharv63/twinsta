@@ -68,9 +68,9 @@ async function seedUsers() {
       }
     }
 
-    console.log('🎉 Seeding completed!');
+    console.log(' Seeding completed!');
   } catch (error) {
-    console.error('❌ Seeding error:', error);
+    console.error(' Seeding error:', error);
   } finally {
     await prisma.$disconnect();
   }

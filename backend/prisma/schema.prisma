@@ -11,26 +11,32 @@ datasource db {
 // User Model
 // -----------------------------
 model User {
-  id           Int       @id @default(autoincrement())
-  name         String
-  email        String    @unique
-  password     String
-  bio          String?
-  profilePic   String?   @db.Text
-  isPrivate    Boolean   @default(false)
-  posts        Post[]
-  likes        Like[]
-  comments     Comment[] // ADD THIS LINE
-  sentMsgs     Message[] @relation("SentMessages")
-  receivedMsgs Message[] @relation("ReceivedMessages")
-  followers    Follow[]  @relation("FollowingRelation")
-  following    Follow[]  @relation("FollowerRelation")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id               Int             @id @default(autoincrement())
+  name             String
+  email            String          @unique
+  password         String
+  bio              String?
+  profilePic       String?         @db.Text
+  isPrivate        Boolean         @default(false)
+  posts            Post[]
+  likes            Like[]
+  comments         Comment[]
+  sentMsgs         Message[]       @relation("SentMessages")
+  receivedMsgs     Message[]       @relation("ReceivedMessages")
+  followers        Follow[]        @relation("FollowingRelation")
+  following        Follow[]        @relation("FollowerRelation")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   sentRequests     FollowRequest[] @relation("FollowerRequests")
   receivedRequests FollowRequest[] @relation("FollowingRequests")
+  // Chats relation (via ChatUser)
+  chatUsers        ChatUser[]
+  ChatMessage      ChatMessage[]
 }
 
+// -----------------------------
+// Post Model
+// -----------------------------
 model Post {
   id        Int       @id @default(autoincrement())
   caption   String?
@@ -39,21 +45,27 @@ model Post {
   updatedAt DateTime  @updatedAt
   author    User      @relation(fields: [authorId], references: [id])
   authorId  Int
-  likes     Like[]    // REMOVE onDelete from here
-  comments  Comment[] // REMOVE onDelete from here
+  likes     Like[]
+  comments  Comment[]
 }
 
+// -----------------------------
+// Like Model
+// -----------------------------
 model Like {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   userId    Int
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)  // KEEP this
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    Int
 
   @@unique([userId, postId])
 }
 
+// -----------------------------
+// Comment Model
+// -----------------------------
 model Comment {
   id        Int      @id @default(autoincrement())
   content   String
@@ -61,20 +73,22 @@ model Comment {
   updatedAt DateTime @updatedAt
   author    User     @relation(fields: [authorId], references: [id])
   authorId  Int
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)  // KEEP this
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    Int
 
   @@map("comments")
 }
 
 // -----------------------------
-// Message Model
+// Direct Message Model (kept for backwards compatibility)
+// NOTE: You can keep this if you used it elsewhere, but for the chat UI we add a Chat/Message model below.
 // -----------------------------
 model Message {
   id         Int      @id @default(autoincrement())
   content    String?
   imageUrl   String?
   createdAt  DateTime @default(now())
+  // These two keep the original direct-message semantics (sender <-> receiver)
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   senderId   Int
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
@@ -82,7 +96,41 @@ model Message {
 }
 
 // -----------------------------
-// Follow Model (fixed relations)
+// Chat / ChatUser / ChatMessage - for room-based chats and chat lists
+// -----------------------------
+model Chat {
+  id        Int           @id @default(autoincrement())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  users     ChatUser[] // participants
+  messages  ChatMessage[]
+  // you can optionally add a name/title field for group chats
+  name      String?
+}
+
+model ChatUser {
+  id     Int  @id @default(autoincrement())
+  chat   Chat @relation(fields: [chatId], references: [id])
+  chatId Int
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  @@unique([chatId, userId])
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    Int
+  sender    User     @relation(fields: [senderId], references: [id])
+  senderId  Int
+  content   String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+}
+
+// -----------------------------
+// Follow / FollowRequest / RequestStatus
 // -----------------------------
 model Follow {
   id          Int      @id @default(autoincrement())
@@ -96,13 +144,13 @@ model Follow {
 }
 
 model FollowRequest {
-  id          Int      @id @default(autoincrement())
-  follower    User     @relation("FollowerRequests", fields: [followerId], references: [id])
+  id          Int           @id @default(autoincrement())
+  follower    User          @relation("FollowerRequests", fields: [followerId], references: [id])
   followerId  Int
-  following   User     @relation("FollowingRequests", fields: [followingId], references: [id])
+  following   User          @relation("FollowingRequests", fields: [followingId], references: [id])
   followingId Int
   status      RequestStatus @default(PENDING)
-  createdAt   DateTime @default(now())
+  createdAt   DateTime      @default(now())
 
   @@unique([followerId, followingId])
 }

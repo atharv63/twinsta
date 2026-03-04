@@ -5,6 +5,8 @@ import {
   getUserProfile,
   getCurrentUser,
   updateProfile,
+  getFollowers,
+  getFollowing
 } from "../controllers/userController.js";
 import { authenticateToken } from "../middleware/authMiddleware.js";
 import {
@@ -14,7 +16,7 @@ import {
   cancelFollowRequest,
   getPendingFollowRequests,
   approveFollowRequest,
-  rejectFollowRequest,
+  rejectFollowRequest
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -43,5 +45,9 @@ router.get("/follow-requests", authenticateToken, getPendingFollowRequests);
 router.post("/follow-requests/:requestId/approve", authenticateToken, approveFollowRequest);
 
 router.post("/follow-requests/:requestId/reject", authenticateToken, rejectFollowRequest);
+
+router.get("/followers/:userId", authenticateToken, getFollowers);
+
+router.get("/following/:userId", authenticateToken, getFollowing);
 
 export default router;
